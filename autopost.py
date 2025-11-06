@@ -26,10 +26,14 @@ class AutoPost:
 
     def post_to_facebook(self):
         self.user_input()
-        # Enter the access page token of your fb page generated from Graph API of Facebook Developers Site(https://developers.facebook.com/tools/). Token must enclosed between quotes as a string.
-        token = 'EAAPaKfEyiSABAKtzmZBai64TdqZAQ56RW2cOsPQRruzOxrOtQWIUB3rvuoV227I5F2pJCP64ZBGTI7lOEC9vPdIgg0ubvnJee7rTx8DZBIJRPxhefRU95pIYg80m4hRPZChYPj5eBUCPcthAlkZADnYWpjvUriZCYhdYkeSjtZAwcgZDZD' #Enter access page token inside these blank quotes.
-        fb = facebook.GraphAPI(access_token = token)
-        fb.put_photo(image = open(self.image_path, 'rb'), message = self.image_desc + '\n' + self.url)
+        # Reading csv file for Facebook credentials
+        df = pd.read_csv("facebook.csv", encoding='utf-8')
+        # Reading access token
+        access_token = df.AccessToken[0]
+        
+        # Post to Facebook using Graph API
+        fb = facebook.GraphAPI(access_token=access_token)
+        fb.put_photo(image=open(self.image_path, 'rb'), message=self.image_desc + '\n' + self.url)
         print("Successfully Posted Content On Your Facebook Page!!")
 
     def post_to_twitter(self):

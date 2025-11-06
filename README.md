@@ -13,12 +13,13 @@ Or Do it manually for each of the module:<br>
 <strong>PERFECT!!</strong>
 
 # How It Works?
-Okay for testing purposes I have already added access tokens for my dummy facebook, twitter pages. So you don't need to worry about that but it's better if you do it on your own account/pages. For LinkedIn and TikTok, we use Selenium with Chrome driver so make sure that you have downloaded chrome driver from here https://chromedriver.chromium.org/downloads.<br>
+All platform credentials are stored in CSV files for easy configuration. For LinkedIn, TikTok, and Instagram, we use Selenium with undetected Chrome driver for automation. For Twitter, you'll need to update the API credentials directly in `autopost.py`.<br>
 
 **Configuration:**<br>
-- **Facebook & Twitter**: Update access tokens in `autopost.py`<br>
+- **Facebook**: Update your page access token in `facebook.csv` (get it from https://developers.facebook.com/tools/)<br>
+- **Twitter**: Update API credentials in `autopost.py`<br>
 - **LinkedIn**: Update credentials in `linkedin.csv`<br>
-- **TikTok**: Update credentials in `tiktok.csv` (note: must support video uploads)<br>
+- **TikTok**: Update credentials in `tiktok.csv`<br>
 - **Instagram**: Update credentials in `instagram.csv`<br>
 - **CAPTCHA Solving**: Add your 2Captcha API key in `config.csv` (get it from https://2captcha.com)<br>
 
