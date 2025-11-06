@@ -11,6 +11,7 @@ from twocaptcha import TwoCaptcha
 import pandas as pd
 from os.path import abspath
 import time
+import requests
 
 class AutoPost:
     def __init__(self):
@@ -28,13 +29,73 @@ class AutoPost:
         self.user_input()
         # Reading csv file for Facebook credentials
         df = pd.read_csv("facebook.csv", encoding='utf-8')
-        # Reading access token
-        access_token = df.AccessToken[0]
+        # Reading access token (can be user or page token)
+        user_access_token = df.AccessToken[0]
         
-        # Post to Facebook using Graph API
-        fb = facebook.GraphAPI(access_token=access_token)
-        fb.put_photo(image=open(self.image_path, 'rb'), message=self.image_desc + '\n' + self.url)
-        print("Successfully Posted Content On Your Facebook Page!!")
+        # Post to Facebook using modern Graph API (direct HTTP requests)
+        try:
+            # Step 1: Get list of pages managed by this user and convert to Page Access Token
+            print("🔄 Getting Page Access Token...")
+            accounts_url = f"https://graph.facebook.com/v18.0/me/accounts?access_token={user_access_token}"
+            accounts_response = requests.get(accounts_url)
+            
+            if accounts_response.status_code != 200:
+                print(f"❌ Error getting pages: {accounts_response.json()}")
+                print("\nMake sure your token has 'pages_show_list' and 'pages_manage_posts' permissions")
+                return
+            
+            pages_data = accounts_response.json()
+            print(f"📋 Debug - API Response: {pages_data}")  # Debug output
+            
+            if not pages_data.get('data') or len(pages_data.get('data', [])) == 0:
+                print("\n❌ No Facebook Pages found for this account")
+                print("\nThis means your token doesn't have 'pages_show_list' permission.")
+                print("\n🔧 To fix this:")
+                print("1. Go to: https://developers.facebook.com/tools/explorer/")
+                print("2. Click 'Get Token' → 'Get User Access Token'")
+                print("3. Check these permissions:")
+                print("   ✓ pages_show_list")
+                print("   ✓ pages_manage_posts")
+                print("   ✓ pages_read_engagement")
+                print("4. Copy the new token to facebook.csv")
+                return
+            
+            # Use the first page (or you can add logic to select specific page)
+            page = pages_data['data'][0]
+            page_id = page['id']
+            page_name = page['name']
+            page_access_token = page['access_token']  # This is the Page Access Token
+            
+            print(f"✓ Connected to Page: '{page_name}' (ID: {page_id})")
+            print(f"✓ Using Page Access Token")
+            
+            # Step 2: Upload photo using Page Access Token
+            photo_url = f"https://graph.facebook.com/v18.0/{page_id}/photos"
+            message = self.image_desc + '\n' + self.url
+            
+            with open(self.image_path, 'rb') as image_file:
+                files = {'source': image_file}
+                data = {
+                    'message': message,
+                    'access_token': page_access_token  # Use Page token, not User token
+                }
+                
+                response = requests.post(photo_url, files=files, data=data)
+            
+            if response.status_code == 200:
+                result = response.json()
+                print("✨ Successfully Posted Content On Your Facebook Page!!")
+                print(f"📸 Post ID: {result.get('id', 'Unknown')}")
+            else:
+                error_info = response.json()
+                print(f"❌ Facebook API Error: {error_info}")
+                print("\nTroubleshooting:")
+                print("1. Make sure your token has 'pages_manage_posts' permission")
+                print("2. Make sure your token has 'pages_show_list' permission")
+                print("3. Check token at: https://developers.facebook.com/tools/debug/accesstoken/")
+            
+        except Exception as e:
+            print(f"❌ Error posting to Facebook: {e}")
 
     def post_to_twitter(self):
         self.user_input()
