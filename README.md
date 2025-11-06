@@ -1,5 +1,5 @@
 # Autoposting-Social-Media-Python
-This is a python based autoposting social media script where one can automatically post images, text captions, an url directly to their social media accounts (Facebook, Twitter, LinkedIn, and TikTok) by just running the python script.
+This is a python based autoposting social media script where one can automatically post images, text captions, an url directly to their social media accounts (Facebook, Twitter, LinkedIn, TikTok, and Instagram) by just running the python script.
 
 # Getting Started
 First things first, let's install all the necessary modules for this project.<br>
@@ -19,6 +19,7 @@ Okay for testing purposes I have already added access tokens for my dummy facebo
 - **Facebook & Twitter**: Update access tokens in `autopost.py`<br>
 - **LinkedIn**: Update credentials in `linkedin.csv`<br>
 - **TikTok**: Update credentials in `tiktok.csv` (note: must support video uploads)<br>
+- **Instagram**: Update credentials in `instagram.csv`<br>
 - **CAPTCHA Solving**: Add your 2Captcha API key in `config.csv` (get it from https://2captcha.com)<br>
 
 **Setting up 2Captcha (for TikTok automation):**<br>
@@ -34,7 +35,8 @@ This script supports posting to the following platforms:<br>
 * **Facebook** - Uses Facebook Graph API<br>
 * **Twitter** - Uses Tweepy API<br>
 * **LinkedIn** - Uses Selenium automation<br>
-* **TikTok** - Uses Selenium automation<br>
+* **TikTok** - Uses Selenium automation with 2Captcha<br>
+* **Instagram** - Uses Selenium automation<br>
 
 # Test Pages
 Demo facebook and twitter pages:<br>

@@ -196,11 +196,129 @@ class AutoPost:
         finally:
             driver.quit()
 
+    def post_to_instagram(self):
+        self.user_input()
+        # Use undetected chromedriver to bypass Instagram's bot detection
+        driver = uc.Chrome()
+        # reading csv file for Instagram credentials
+        df = pd.read_csv("instagram.csv", encoding='utf-8')
+        # reading username
+        myUsername = df.Username[0]
+        # reading password
+        myPassword = df.Password[0]
+        absolute_file_path = abspath(self.image_path)
+        
+        # Navigate to Instagram login page
+        driver.get("https://www.instagram.com/accounts/login/")
+        time.sleep(3)
+        
+        # Login to Instagram
+        try:
+            # Enter username
+            username_field = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.NAME, "username"))
+            )
+            username_field.send_keys(myUsername)
+            
+            # Enter password
+            password_field = driver.find_element(By.NAME, "password")
+            password_field.send_keys(myPassword)
+            
+            # Click login button
+            login_button = driver.find_element(By.XPATH, '//button[@type="submit"]')
+            login_button.click()
+            
+            print("\n⏳ Logging in...")
+            time.sleep(5)
+            
+            # Handle "Save Login Info" prompt
+            try:
+                not_now_button = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Not Now")]'))
+                )
+                not_now_button.click()
+                time.sleep(2)
+            except:
+                pass
+            
+            # Handle "Turn on Notifications" prompt
+            try:
+                not_now_button = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Not Now")]'))
+                )
+                not_now_button.click()
+                time.sleep(2)
+            except:
+                pass
+            
+            print("✅ Logged in successfully!")
+            
+            # Click on New Post button (+ icon)
+            print("📸 Creating new post...")
+            create_post_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, '//a[contains(@href, "/create/") or @aria-label="New post" or @aria-label="Create"]'))
+            )
+            create_post_button.click()
+            time.sleep(2)
+            
+            # Upload photo
+            print("📤 Uploading photo...")
+            file_input = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, '//input[@type="file"]'))
+            )
+            file_input.send_keys(absolute_file_path)
+            time.sleep(3)
+            
+            # Click Next button (multiple times through the flow)
+            print("➡️  Processing...")
+            for i in range(3):
+                try:
+                    next_button = WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Next")]'))
+                    )
+                    next_button.click()
+                    time.sleep(2)
+                except:
+                    break
+            
+            # Add caption
+            print("✍️  Adding caption...")
+            try:
+                caption_field = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, '//textarea[@aria-label="Write a caption..."]'))
+                )
+                caption_text = self.image_desc + "\n\n" + self.url
+                caption_field.send_keys(caption_text)
+                time.sleep(2)
+            except:
+                print("⚠️  Could not find caption field, continuing...")
+            
+            # Click Share button
+            print("🚀 Posting...")
+            share_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Share")]'))
+            )
+            share_button.click()
+            time.sleep(5)
+            
+            print("✨ Successfully Posted Content On Your Instagram Account!!")
+            time.sleep(3)
+            
+        except Exception as e:
+            print(f"\n❌ Error posting to Instagram: {e}")
+            print("Browser will remain open for 10 seconds for inspection...")
+            time.sleep(10)
+        finally:
+            try:
+                driver.quit()
+            except:
+                pass
+
 
 if __name__ == '__main__':
     ap = AutoPost()
     while(True):
-        app = input("Where do you want to post your content? (facebook, twitter, linkedin, tiktok or exit)\n")
+        app = input("Where do you want to post your content? (facebook, twitter, linkedin, tiktok, instagram or exit)\n")
         if app == 'facebook':
             ap.post_to_facebook()
         elif app == 'twitter':
@@ -209,6 +327,8 @@ if __name__ == '__main__':
             ap.post_to_linkedin()
         elif app == 'tiktok':
             ap.post_to_tiktok()
+        elif app == 'instagram':
+            ap.post_to_instagram()
         elif app == 'exit':
             break
         else:
