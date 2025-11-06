@@ -231,35 +231,172 @@ class AutoPost:
             print("\n⏳ Logging in...")
             time.sleep(5)
             
-            # Handle "Save Login Info" prompt
+            # Function to dismiss any popup
+            def dismiss_popup():
+                popup_dismissed = False
+                # Try all possible popup dismiss buttons
+                dismiss_buttons = [
+                    '//button[contains(text(), "Not Now")]',
+                    '//button[contains(text(), "Not now")]',
+                    '//button[contains(text(), "Never")]',
+                    '//button[contains(text(), "not now")]',
+                    '//button[text()="Not Now"]',
+                    '//div[@role="dialog"]//button[contains(., "Not Now")]',
+                    '//div[@role="dialog"]//button[contains(., "Never")]'
+                ]
+                
+                for xpath in dismiss_buttons:
+                    try:
+                        button = driver.find_element(By.XPATH, xpath)
+                        if button.is_displayed():
+                            button.click()
+                            popup_dismissed = True
+                            time.sleep(1)
+                            break
+                    except:
+                        continue
+                return popup_dismissed
+            
+            # Handle "Save Login Info" / "Save password?" prompt (first attempt)
             try:
-                not_now_button = WebDriverWait(driver, 5).until(
-                    EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Not Now")]'))
-                )
-                not_now_button.click()
                 time.sleep(2)
+                if dismiss_popup():
+                    print("✅ Dismissed 'Save Login Info' popup")
+                    time.sleep(2)
             except:
                 pass
             
             # Handle "Turn on Notifications" prompt
             try:
-                not_now_button = WebDriverWait(driver, 5).until(
-                    EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Not Now")]'))
-                )
-                not_now_button.click()
-                time.sleep(2)
+                time.sleep(1)
+                if dismiss_popup():
+                    print("✅ Dismissed 'Notifications' popup")
+                    time.sleep(2)
+            except:
+                pass
+            
+            # Extra check for any remaining popups before proceeding
+            try:
+                time.sleep(1)
+                if dismiss_popup():
+                    print("✅ Dismissed additional popup")
+                    time.sleep(1)
             except:
                 pass
             
             print("✅ Logged in successfully!")
             
-            # Click on New Post button (+ icon)
+            # Click on Create/New Post button (+ icon in sidebar)
             print("📸 Creating new post...")
-            create_post_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, '//a[contains(@href, "/create/") or @aria-label="New post" or @aria-label="Create"]'))
-            )
-            create_post_button.click()
-            time.sleep(2)
+            try:
+                # Try multiple selectors for the Create button
+                create_post_button = None
+                selectors = [
+                    '//a[@href="#"]//span[contains(@class, "x1lliihq") and contains(@class, "x1plvlek")]//parent::div//parent::a[contains(@href, "#")]',
+                    '//a[contains(@href, "/create/")]',
+                    '//span[text()="Create"]//ancestor::a',
+                    '//div[@role="menuitem"]//span[text()="Create"]//ancestor::a',
+                    '//a[@aria-label="New post"]',
+                    '//a[@aria-label="Create"]',
+                    '//span[contains(text(), "Create")]//parent::*//parent::a'
+                ]
+                
+                for selector in selectors:
+                    try:
+                        create_post_button = WebDriverWait(driver, 3).until(
+                            EC.element_to_be_clickable((By.XPATH, selector))
+                        )
+                        print(f"✓ Found Create button with selector")
+                        break
+                    except:
+                        continue
+                
+                if create_post_button:
+                    create_post_button.click()
+                    time.sleep(2)
+                else:
+                    raise Exception("Could not find Create button")
+                    
+            except Exception as e:
+                print(f"⚠️  Error finding Create button: {e}")
+                print("Trying alternative approach...")
+                # Try clicking on the sidebar Create option by position
+                driver.find_element(By.XPATH, '//a[contains(@href, "#")]//span[contains(text(), "Create")]').click()
+                time.sleep(2)
+            
+            # Click on "Post" from the Create submenu
+            print("📝 Selecting 'Post' option...")
+            try:
+                post_option_selectors = [
+                    # Match the actual <a> link element with SVG aria-label
+                    '//a[@role="link" and @href="#"]//svg[@aria-label="Post"]//ancestor::a',
+                    '//svg[@aria-label="Post"]//ancestor::a[@role="link"]',
+                    '//a[@role="link"]//svg[@aria-label="Post"]//parent::div//parent::div//parent::div//parent::div//parent::div//parent::a',
+                    # Match by the nested span text within the link
+                    '//a[@role="link" and @href="#"]//span[text()="Post"]//ancestor::a',
+                    '//a[@role="link"]//span[@class="x1lliihq x193iq5w x6ikm8r x10wlt62 xlyipyv xuxw1ft" and text()="Post"]//ancestor::a',
+                    # Simpler approaches
+                    '//a[@href="#" and .//span[text()="Post"]]',
+                    '//a[contains(@class, "x1i10hfl") and @role="link" and @href="#" and .//span[text()="Post"]]'
+                ]
+                
+                post_option_clicked = False
+                for idx, selector in enumerate(post_option_selectors):
+                    try:
+                        post_option = WebDriverWait(driver, 5).until(
+                            EC.presence_of_element_located((By.XPATH, selector))
+                        )
+                        # Check if element is visible
+                        if post_option.is_displayed():
+                            print(f"  → Found Post button with selector #{idx+1}")
+                            # Try both regular click and JavaScript click
+                            try:
+                                post_option.click()
+                                print("  → Clicked with regular method")
+                            except:
+                                driver.execute_script("arguments[0].click();", post_option)
+                                print("  → Clicked with JavaScript")
+                            post_option_clicked = True
+                            print("✓ Selected 'Post' option")
+                            time.sleep(5)
+                            break
+                    except Exception as sel_error:
+                        continue
+                
+                if not post_option_clicked:
+                    print("⚠️  Could not find 'Post' option in submenu, trying fallback methods...")
+                    # Final attempt: find any element with "Post" text or aria-label
+                    try:
+                        # Try by SVG aria-label first
+                        svg_elements = driver.find_elements(By.XPATH, '//svg[@aria-label="Post"]')
+                        for svg in svg_elements:
+                            if svg.is_displayed():
+                                # Click the parent <a> tag
+                                parent_link = svg.find_element(By.XPATH, './ancestor::a[@role="link"]')
+                                driver.execute_script("arguments[0].click();", parent_link)
+                                print("✓ Clicked 'Post' via SVG aria-label (JavaScript)")
+                                time.sleep(5)
+                                post_option_clicked = True
+                                break
+                        
+                        # If still not clicked, try any element with "Post" text
+                        if not post_option_clicked:
+                            all_elements = driver.find_elements(By.XPATH, '//*[text()="Post"]')
+                            for elem in all_elements:
+                                if elem.is_displayed():
+                                    driver.execute_script("arguments[0].click();", elem)
+                                    print("✓ Clicked 'Post' via text match (JavaScript)")
+                                    time.sleep(5)
+                                    post_option_clicked = True
+                                    break
+                    except:
+                        pass
+                        
+                if not post_option_clicked:
+                    print("⚠️  Could not find 'Post' option, continuing anyway...")
+                    
+            except Exception as e:
+                print(f"⚠️  Error selecting Post option: {e}")
             
             # Upload photo
             print("📤 Uploading photo...")
@@ -269,37 +406,110 @@ class AutoPost:
             file_input.send_keys(absolute_file_path)
             time.sleep(3)
             
-            # Click Next button (multiple times through the flow)
-            print("➡️  Processing...")
-            for i in range(3):
-                try:
-                    next_button = WebDriverWait(driver, 10).until(
-                        EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Next")]'))
-                    )
-                    next_button.click()
-                    time.sleep(2)
-                except:
-                    break
+            # Click Next button after photo upload (to proceed to crop/edit screen)
+            print("➡️  Clicking Next after upload...")
+            try:
+                next_selectors = [
+                    '//div[@role="button" and text()="Next"]',
+                    '//div[@role="button" and contains(text(), "Next")]',
+                    '//button[contains(text(), "Next")]',
+                    '//*[@role="button"][text()="Next"]'
+                ]
+                
+                next_clicked = False
+                for selector in next_selectors:
+                    try:
+                        next_button = WebDriverWait(driver, 10).until(
+                            EC.element_to_be_clickable((By.XPATH, selector))
+                        )
+                        next_button.click()
+                        print("✓ Clicked Next (crop/edit)")
+                        time.sleep(3)
+                        next_clicked = True
+                        break
+                    except:
+                        continue
+                
+                if not next_clicked:
+                    print("⚠️  Could not find Next button after upload")
+            except Exception as e:
+                print(f"⚠️  Error clicking Next after upload: {e}")
+            
+            # Click Next button again (to proceed to caption screen)
+            print("➡️  Proceeding to caption screen...")
+            try:
+                for selector in next_selectors:
+                    try:
+                        next_button = WebDriverWait(driver, 10).until(
+                            EC.element_to_be_clickable((By.XPATH, selector))
+                        )
+                        next_button.click()
+                        print("✓ Clicked Next (to caption)")
+                        time.sleep(3)
+                        break
+                    except:
+                        continue
+            except Exception as e:
+                print(f"⚠️  Error clicking Next to caption: {e}")
             
             # Add caption
             print("✍️  Adding caption...")
             try:
-                caption_field = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, '//textarea[@aria-label="Write a caption..."]'))
-                )
-                caption_text = self.image_desc + "\n\n" + self.url
-                caption_field.send_keys(caption_text)
-                time.sleep(2)
-            except:
-                print("⚠️  Could not find caption field, continuing...")
+                caption_selectors = [
+                    '//div[@aria-label="Write a caption..." and @contenteditable="true"]',
+                    '//div[@contenteditable="true" and @role="textbox"][@aria-label="Write a caption..."]',
+                    '//div[@role="textbox" and contains(@class, "notranslate")][@aria-label="Write a caption..."]',
+                    '//textarea[@aria-label="Write a caption..."]'
+                ]
+                
+                caption_field_found = False
+                for selector in caption_selectors:
+                    try:
+                        caption_field = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.XPATH, selector))
+                        )
+                        caption_text = self.image_desc + "\n\n" + self.url
+                        caption_field.send_keys(caption_text)
+                        print("✓ Caption added successfully")
+                        time.sleep(2)
+                        caption_field_found = True
+                        break
+                    except:
+                        continue
+                
+                if not caption_field_found:
+                    print("⚠️  Could not find caption field, continuing...")
+            except Exception as e:
+                print(f"⚠️  Error adding caption: {e}")
             
             # Click Share button
             print("🚀 Posting...")
-            share_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Share")]'))
-            )
-            share_button.click()
-            time.sleep(5)
+            try:
+                share_selectors = [
+                    '//div[@role="button" and text()="Share"]',
+                    '//div[@role="button" and contains(text(), "Share")]',
+                    '//button[contains(text(), "Share")]',
+                    '//*[@role="button"][text()="Share"]'
+                ]
+                
+                share_clicked = False
+                for selector in share_selectors:
+                    try:
+                        share_button = WebDriverWait(driver, 10).until(
+                            EC.element_to_be_clickable((By.XPATH, selector))
+                        )
+                        share_button.click()
+                        print("✓ Share button clicked")
+                        time.sleep(5)
+                        share_clicked = True
+                        break
+                    except:
+                        continue
+                
+                if not share_clicked:
+                    print("⚠️  Could not find Share button")
+            except Exception as e:
+                print(f"⚠️  Error clicking Share: {e}")
             
             print("✨ Successfully Posted Content On Your Instagram Account!!")
             time.sleep(3)
