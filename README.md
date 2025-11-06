@@ -1,5 +1,5 @@
 # Autoposting-Social-Media-Python
-This is a python based autoposting social media script where one can automatically post images, text captions, an url directly to their social media accounts by just running the python script.
+This is a python based autoposting social media script where one can automatically post images, text captions, an url directly to their social media accounts (Facebook, Twitter, LinkedIn, and TikTok) by just running the python script.
 
 # Getting Started
 First things first, let's install all the necessary modules for this project.<br>
@@ -13,11 +13,31 @@ Or Do it manually for each of the module:<br>
 <strong>PERFECT!!</strong>
 
 # How It Works?
-Okay for testing purposes I have already added access tokens for my dummy facebook, twitter pages. So you don't need to worry about that but it's better if you do it on your own account/pages. For linkedin, we are gonna use selenium with chrome driver so make sure that you have downloaded chrome driver from here https://chromedriver.chromium.org/downloads.<br> Also I have also added login credentials for my linkedin dummy account.<br>
+Okay for testing purposes I have already added access tokens for my dummy facebook, twitter pages. So you don't need to worry about that but it's better if you do it on your own account/pages. For LinkedIn and TikTok, we use Selenium with Chrome driver so make sure that you have downloaded chrome driver from here https://chromedriver.chromium.org/downloads.<br>
+
+**Configuration:**<br>
+- **Facebook & Twitter**: Update access tokens in `autopost.py`<br>
+- **LinkedIn**: Update credentials in `linkedin.csv`<br>
+- **TikTok**: Update credentials in `tiktok.csv` (note: must support video uploads)<br>
+- **CAPTCHA Solving**: Add your 2Captcha API key in `config.csv` (get it from https://2captcha.com)<br>
+
+**Setting up 2Captcha (for TikTok automation):**<br>
+1. Sign up at https://2captcha.com<br>
+2. Get your API key from the dashboard<br>
+3. Add funds to your account (~$1-3 per 1000 CAPTCHAs)<br>
+4. Update `config.csv` with your API key<br>
+
 Now you are good to go. Just run the autopost.py script and play around with different functions. Type python autopost.py in command line and hit enter.<br><br>
 
-# Facebook And Twitter Pages
-So here I'm providing links for those facebook and twitter page where your content are gonna posted.<br>
+# Supported Platforms
+This script supports posting to the following platforms:<br>
+* **Facebook** - Uses Facebook Graph API<br>
+* **Twitter** - Uses Tweepy API<br>
+* **LinkedIn** - Uses Selenium automation<br>
+* **TikTok** - Uses Selenium automation<br>
+
+# Test Pages
+Demo facebook and twitter pages:<br>
 * Facebook : https://www.facebook.com/codingrdx/ <br>
 * Twitter : https://twitter.com/venom_rdx
 
