@@ -185,54 +185,118 @@ class AutoPost:
             login_button = driver.find_element(By.XPATH, '//button[@type="submit"]')
             login_button.click()
             
-            # Wait for CAPTCHA to appear and solve it automatically
-            print("\n⏳ Waiting for CAPTCHA...")
-            time.sleep(3)
+            # Wait longer for page to load and CAPTCHA to appear
+            print("\n⏳ Waiting for login to process...")
+            time.sleep(5)
+            
+            # Check for various CAPTCHA indicators
+            captcha_detected = False
+            captcha_selectors = [
+                '//iframe[contains(@id, "captcha")]',
+                '//div[contains(@id, "captcha")]',
+                '//div[contains(@class, "captcha")]',
+                '//*[contains(@id, "secsdk-captcha")]',
+                '//*[contains(text(), "Verify")]',
+                '//*[contains(text(), "verify")]',
+                '//div[@role="dialog"]',  # Puzzle slider often appears in dialog
+                '//canvas',  # Puzzle CAPTCHAs often use canvas
+            ]
             
             # Check if CAPTCHA appeared
-            try:
-                # Look for CAPTCHA iframe or element
-                captcha_frame = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.XPATH, '//iframe[contains(@id, "captcha")]'))
-                )
-                print("🔍 CAPTCHA detected! Solving with 2Captcha...")
-                
-                # Get the page source/screenshot for CAPTCHA solving
-                page_url = driver.current_url
-                
-                # For TikTok's slider CAPTCHA, we need to use GeeTest or similar
-                # Get the sitekey or necessary parameters
-                driver.switch_to.frame(captcha_frame)
-                
-                # Try to get CAPTCHA parameters
+            for selector in captcha_selectors:
                 try:
-                    # This is a simplified approach - TikTok uses complex CAPTCHA
-                    # For production, you'd need to identify the exact CAPTCHA type
-                    print("⚠️  TikTok uses complex slider CAPTCHA.")
-                    print("📝 2Captcha requires manual intervention for slider puzzles.")
-                    print("🔄 Falling back to manual solving...")
-                    driver.switch_to.default_content()
-                    
-                    # Manual solving fallback
-                    print("\n" + "="*60)
-                    print("⚠️  CAPTCHA DETECTED - MANUAL ACTION REQUIRED")
-                    print("="*60)
-                    print("Please solve the CAPTCHA puzzle in the browser window.")
-                    print("After solving it and successfully logging in,")
-                    input("press ENTER here to continue...\n")
-                    
-                except Exception as captcha_error:
-                    print(f"CAPTCHA solving error: {captcha_error}")
-                    driver.switch_to.default_content()
-                    
-            except:
-                # No CAPTCHA appeared, login successful
-                print("✅ No CAPTCHA detected, login successful!")
-                time.sleep(2)
+                    captcha_element = driver.find_element(By.XPATH, selector)
+                    if captcha_element.is_displayed():
+                        captcha_detected = True
+                        print(f"🔍 CAPTCHA detected! (Found with selector: {selector[:50]}...)")
+                        break
+                except:
+                    continue
             
-            # Navigate to upload page
-            driver.get("https://www.tiktok.com/upload")
-            time.sleep(3)
+            # Also check if we're still on login page (another indicator of CAPTCHA/failed login)
+            current_url = driver.current_url
+            if 'login' in current_url.lower():
+                captcha_detected = True
+                print("🔍 CAPTCHA/verification detected (still on login page)")
+            
+            if captcha_detected:
+                print("\n" + "="*60)
+                print("🤖 CAPTCHA DETECTED - ATTEMPTING 2CAPTCHA SOLVE")
+                print("="*60)
+                print("🧩 TikTok is showing a CAPTCHA")
+                print("🔄 Attempting to solve with 2Captcha service...")
+                
+                try:
+                    # Try to solve with 2Captcha
+                    print("📸 Taking screenshot for 2Captcha...")
+                    screenshot_path = "captcha_screenshot.png"
+                    driver.save_screenshot(screenshot_path)
+                    
+                    print("📤 Sending to 2Captcha for solving...")
+                    print("⏳ This may take 30-90 seconds...")
+                    print("💰 Note: Each solve attempt costs ~$0.003")
+                    
+                    # Use 2Captcha's normal image CAPTCHA method
+                    result = solver.normal(screenshot_path)
+                    
+                    print(f"✅ 2Captcha solution received: {result.get('code', 'No code')}")
+                    print("⏳ Waiting 10 seconds for CAPTCHA to process...")
+                    time.sleep(10)
+                    
+                    # Check if we're now logged in (no longer on login page)
+                    current_url = driver.current_url
+                    if 'login' not in current_url.lower():
+                        print("✨ CAPTCHA appears to be solved! Login successful!")
+                        captcha_detected = False  # Mark as resolved
+                    else:
+                        print("\n⚠️  2Captcha solution didn't work automatically")
+                        print("    TikTok's puzzle slider requires manual interaction")
+                    
+                except Exception as e:
+                    print(f"\n❌ 2Captcha solving error: {e}")
+                    if "ERROR_ZERO_BALANCE" in str(e):
+                        print("💳 Your 2Captcha account balance is zero")
+                        print("   Add funds at: https://2captcha.com")
+                    print("\n🔄 Falling back to manual solving...")
+                
+                # Only prompt for manual solving if 2Captcha didn't work
+                if captcha_detected:
+                    print("\n" + "="*60)
+                    print("👤 MANUAL VERIFICATION REQUIRED")
+                    print("="*60)
+                    print("👉 Please check the browser window:")
+                    print("   • If CAPTCHA is solved → Great!")
+                    print("   • If CAPTCHA still showing → Please solve it manually")
+                    print("   • Make sure you're logged in before continuing")
+                    print("\n⏳ After confirming login is successful,")
+                    input("   press ENTER here to continue...\n")
+                    print("✅ Continuing with upload...")
+                    
+                    # Verify browser is still active
+                    try:
+                        current_url = driver.current_url
+                        print(f"📍 Current URL: {current_url[:60]}...")
+                    except Exception as verify_error:
+                        print(f"\n❌ Browser connection lost: {verify_error}")
+                        print("The browser may have closed. Please run the script again.")
+                        return
+                else:
+                    print("✅ 2Captcha solved the CAPTCHA automatically!")
+                    
+            else:
+                print("✅ No CAPTCHA detected, login appears successful!")
+            
+            time.sleep(2)
+            
+            # Verify browser is still connected before navigating
+            try:
+                print("🔄 Navigating to upload page...")
+                driver.get("https://www.tiktok.com/upload")
+                time.sleep(5)  # Give more time for upload page to load
+            except Exception as nav_error:
+                print(f"\n❌ Navigation error: {nav_error}")
+                print("Browser connection may be lost. Check if browser is still open.")
+                raise
             
             # Upload video/image
             upload_input = WebDriverWait(driver, 10).until(
@@ -255,11 +319,18 @@ class AutoPost:
             post_button.click()
             time.sleep(3)
             
-            print("Successfully Posted Content On Your TikTok Account!!")
+            print("✨ Successfully Posted Content On Your TikTok Account!!")
+            time.sleep(3)
+            
         except Exception as e:
-            print(f"Error posting to TikTok: {e}")
+            print(f"\n❌ Error posting to TikTok: {e}")
+            print("Browser will remain open for 15 seconds for inspection...")
+            time.sleep(15)
         finally:
-            driver.quit()
+            try:
+                driver.quit()
+            except:
+                pass
 
     def post_to_instagram(self):
         self.user_input()
